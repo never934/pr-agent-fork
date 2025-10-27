@@ -7,7 +7,7 @@ services:
     ports:
       - "4888:4888"
     depends_on:
-      - mongodb
+      - prompt-tuner-mongodb
     networks:
       - prompt-tuner-app-network
 
