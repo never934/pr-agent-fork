@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app-backend:
+    build:
+      dockerfile: Dockerfile
+    ports:
+      - "4888:4888"
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  mongodb:
+    image: mongo:latest
+    restart: always
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27020:27020"
+    networks:
+      - app-network
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: adminpass
+
+volumes:
+  mongodb_data:
+
+networks:
+  app-network:
+    driver: bridge
