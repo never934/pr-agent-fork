@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  app-backend:
+  prompt-tuner-app-backend:
     build:
       dockerfile: Dockerfile
     ports:
@@ -9,9 +9,9 @@ services:
     depends_on:
       - mongodb
     networks:
-      - app-network
+      - prompt-tuner-app-network
 
-  mongodb:
+  prompt-tuner-mongodb:
     image: mongo:latest
     restart: always
     volumes:
@@ -19,7 +19,7 @@ services:
     ports:
       - "27020:27020"
     networks:
-      - app-network
+      - prompt-tuner-app-network
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: adminpass
@@ -28,5 +28,5 @@ volumes:
   mongodb_data:
 
 networks:
-  app-network:
+  prompt-tuner-app-network:
     driver: bridge
