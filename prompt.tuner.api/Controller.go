@@ -33,8 +33,19 @@ func GetPrompt(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "No gitlab project id found"})
 		return
 	}
+	var collection = GetPromptsCollection()
+	var filter = bson.M{"gitlabProjectId": gitlabProjectId}
+	count, err := collection.CountDocuments(context.TODO(), filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Database error"})
+		return
+	}
+	if count == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Prompt not found"})
+		return
+	}
 	var prompt Prompt
-	err := GetPromptsCollection().FindOne(context.TODO(), bson.M{"gitlabProjectId": gitlabProjectId}).Decode(&prompt)
+	err = collection.FindOne(context.TODO(), filter).Decode(&prompt)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Prompt decode error"})
 		return
@@ -45,16 +56,16 @@ func GetPrompt(c *gin.Context) {
 func SetBasePrompt(c *gin.Context) {
 	var prompt Prompt
 	if err := c.ShouldBindJSON(&prompt); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body", "error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 		return
 	}
 	_, err := GetPromptsCollection().DeleteOne(context.TODO(), bson.M{"gitlabProjectId": prompt.GitlabProjectId})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Database error", "error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Database error"})
 		return
 	}
 	_, err = GetPromptsCollection().InsertOne(context.TODO(), prompt)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Insert prompt error", "error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Insert prompt error"})
 	}
 }
