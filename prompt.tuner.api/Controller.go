@@ -31,11 +31,13 @@ func GetPrompt(c *gin.Context) {
 	gitlabProjectId, exists := c.GetQuery("gitlabProjectId")
 	if !exists {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "No gitlab project id found"})
+		return
 	}
 	var prompt Prompt
 	err := GetPromptsCollection().FindOne(context.TODO(), bson.M{"gitlabProjectId": gitlabProjectId}).Decode(&prompt)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Prompt decode error"})
+		return
 	}
 	c.JSON(http.StatusOK, prompt)
 }
