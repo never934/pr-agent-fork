@@ -9,6 +9,6 @@ RUN go mod download
 COPY . ./
 RUN go build -v -o /prompt.tuner.api
 
-EXPOSE 4888
+EXPOSE ${APP_PORT}
 
 CMD ["/prompt.tuner.api"]

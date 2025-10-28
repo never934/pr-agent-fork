@@ -5,11 +5,16 @@ services:
     build:
       dockerfile: Dockerfile
     ports:
-      - "4888:4888"
+      - "${APP_PORT}:${APP_PORT}"
     depends_on:
       - prompt-tuner-mongodb
     networks:
       - prompt-tuner-app-network
+    environment:
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      APP_PORT: ${APP_PORT}
+      MONGO_HOST: ${MONGO_HOST}
+      MONGO_PORT: ${MONGO_PORT}
 
   prompt-tuner-mongodb:
     image: mongo:latest
@@ -17,13 +22,13 @@ services:
     volumes:
       - mongodb_data:/data/db
     ports:
-      - "27020:27020"
-    command: ["--port", "27020", "--bind_ip_all"]
+      - "${MONGO_PORT}:${MONGO_PORT}"
+    command: ["--port", "${MONGO_PORT}", "--bind_ip_all"]
     networks:
       - prompt-tuner-app-network
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: adminpass
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_LOGIN}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS}
 
 volumes:
   mongodb_data:

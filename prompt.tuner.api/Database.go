@@ -4,15 +4,16 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"log"
+	"os"
 )
 
 var Database *mongo.Database
 
 func GetDatabase() *mongo.Database {
 	if Database == nil {
-		var host = "10.30.23.8:27020"
-		var login = "admin"
-		var password = "adminpass"
+		var host = os.Getenv("MONGO_HOST") + ":" + os.Getenv("MONGO_PORT")
+		var login = os.Getenv("MONGO_LOGIN")
+		var password = os.Getenv("MONGO_PASS")
 		clientOpts := options.Client().SetHosts(
 			[]string{host},
 		).SetAuth(
