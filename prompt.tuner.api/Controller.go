@@ -35,7 +35,7 @@ func GetPrompt(c *gin.Context) {
 		return
 	}
 	var collection = GetPromptsCollection()
-	var filter = bson.M{"gitlabProjectId": gitlabProjectId}
+	var filter = bson.M{"gitlabprojectid": gitlabProjectId}
 	count, err := collection.CountDocuments(context.TODO(), filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Database error"})
@@ -61,7 +61,7 @@ func SetBasePrompt(c *gin.Context) {
 		return
 	}
 	collection := GetPromptsCollection()
-	filter := bson.M{"gitlabProjectId": prompt.GitlabProjectId}
+	filter := bson.M{"gitlabprojectid": prompt.GitlabProjectId}
 	_, err := collection.ReplaceOne(
 		context.TODO(),
 		filter,
