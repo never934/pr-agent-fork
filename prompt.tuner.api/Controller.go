@@ -44,7 +44,7 @@ func Webhook(c *gin.Context) {
 	}
 	var collection = GetReactionsCollection()
 	if gitlabWebhookRequest.ObjectAttributes.Action == "revoke" {
-		collection.DeleteOne(context.TODO(), bson.M{"reactionurl": gitlabWebhookRequest.AwardedOnUrl})
+		collection.DeleteOne(context.TODO(), bson.M{"reactionurl": gitlabWebhookRequest.ObjectAttributes.AwardedOnUrl})
 		log.Println("[Webhook] reaction deleted")
 		c.JSON(http.StatusOK, gin.H{})
 		return
@@ -61,7 +61,7 @@ func Webhook(c *gin.Context) {
 		AiComment:       gitlabWebhookRequest.Note.Description,
 		CreateDate:      time.Now().Format(time.RFC1123),
 		GitlabProjectId: strconv.Itoa(gitlabWebhookRequest.ProjectId),
-		ReactionUrl:     gitlabWebhookRequest.AwardedOnUrl,
+		ReactionUrl:     gitlabWebhookRequest.ObjectAttributes.AwardedOnUrl,
 	}
 	var result, err = collection.InsertOne(context.Background(), reaction)
 	if err != nil {
