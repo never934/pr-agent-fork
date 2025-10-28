@@ -59,12 +59,15 @@ func SetBasePrompt(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 		return
 	}
-	_, err := GetPromptsCollection().DeleteOne(context.TODO(), bson.M{"gitlabProjectId": prompt.GitlabProjectId})
+	var gitlabProjectId = prompt.GitlabProjectId
+	var collection = GetPromptsCollection()
+	var filter = bson.M{"gitlabProjectId": gitlabProjectId}
+	_, err := collection.DeleteOne(context.TODO(), filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Database error"})
 		return
 	}
-	_, err = GetPromptsCollection().InsertOne(context.TODO(), prompt)
+	_, err = collection.InsertOne(context.TODO(), prompt)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Insert prompt error"})
 	}
