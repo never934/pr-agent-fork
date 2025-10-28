@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"prompt.tuner.api/entity"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -59,7 +60,7 @@ func Webhook(c *gin.Context) {
 		Type:            reactionType,
 		AiComment:       gitlabWebhookRequest.Note.Description,
 		CreateDate:      time.Now().Format(time.RFC1123),
-		GitlabProjectId: gitlabWebhookRequest.ProjectId,
+		GitlabProjectId: strconv.Itoa(gitlabWebhookRequest.ProjectId),
 		ReactionUrl:     gitlabWebhookRequest.AwardedOnUrl,
 	}
 	var result, err = collection.InsertOne(context.Background(), reaction)

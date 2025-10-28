@@ -1,7 +1,7 @@
 package entity
 
 type GitlabWebhookRequest struct {
-	ProjectId        string                               `json:"project_id"`
+	ProjectId        int                                  `json:"project_id"`
 	ObjectAttributes GitlabWebhookRequestObjectAttributes `json:"object_attributes"`
 	User             GitlabWebhookRequestUser             `json:"user"`
 	AwardedOnUrl     string                               `json:"awarded_on_url"`
