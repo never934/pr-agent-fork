@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"io"
 	"log"
 	"net/http"
@@ -59,16 +60,20 @@ func SetBasePrompt(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 		return
 	}
-	var gitlabProjectId = prompt.GitlabProjectId
-	var collection = GetPromptsCollection()
-	var filter = bson.M{"gitlabProjectId": gitlabProjectId}
-	_, err := collection.DeleteOne(context.TODO(), filter)
+	collection := GetPromptsCollection()
+	filter := bson.M{"gitlabProjectId": prompt.GitlabProjectId}
+	_, err := collection.ReplaceOne(
+		context.TODO(),
+		filter,
+		prompt,
+		options.Replace().SetUpsert(true),
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Database error"})
 		return
 	}
-	_, err = collection.InsertOne(context.TODO(), prompt)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Insert prompt error"})
-	}
+	c.JSON(
+		http.StatusOK,
+		gin.H{"message": "Prompt updated successfully"},
+	)
 }
