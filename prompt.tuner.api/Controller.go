@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"log"
 	"net/http"
 	"prompt.tuner.api/entity"
 	"strings"
@@ -14,29 +16,35 @@ import (
 func Webhook(c *gin.Context) {
 	gitlabEventHeader := c.Request.Header.Get("X-Gitlab-Event")
 	if gitlabEventHeader == "" {
+		log.Println("[Webhook] X-Gitlab-Event header not found")
 		c.JSON(http.StatusBadRequest, gin.H{"message": "X-Gitlab-Event header not found"})
 		return
 	}
 	if gitlabEventHeader != "Emoji Hook" {
+		log.Println("[Webhook] X-Gitlab-Event header not emoji hook")
 		c.JSON(http.StatusBadRequest, gin.H{"message": "X-Gitlab-Event header not emoji hook"})
 		return
 	}
 	var gitlabWebhookRequest entity.GitlabWebhookRequest
 	if err := c.ShouldBindJSON(&gitlabWebhookRequest); err != nil {
+		log.Println(fmt.Sprintf("[Webhook] Invalid request body %s", err.Error()))
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 		return
 	}
 	if strings.Contains(gitlabWebhookRequest.User.Username, "bot") {
+		log.Println("[Webhook] reaction from bot")
 		c.JSON(http.StatusOK, gin.H{})
 		return
 	}
 	if !strings.Contains(gitlabWebhookRequest.Note.Description, "AI Ревью") {
+		log.Println("[Webhook] reaction not for ai review")
 		c.JSON(http.StatusOK, gin.H{})
 		return
 	}
 	var collection = GetReactionsCollection()
 	if gitlabWebhookRequest.ObjectAttributes.Action == "revoke" {
 		collection.DeleteOne(context.TODO(), bson.M{"reactionurl": gitlabWebhookRequest.AwardedOnUrl})
+		log.Println("[Webhook] reaction deleted")
 		c.JSON(http.StatusOK, gin.H{})
 		return
 	}
@@ -56,8 +64,11 @@ func Webhook(c *gin.Context) {
 	}
 	var result, err = collection.InsertOne(context.Background(), reaction)
 	if err != nil {
+		log.Println(fmt.Sprintf("[Webhook] Database insert reaction error %s", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Database insert reaction error"})
+		return
 	}
+	log.Println("[Webhook] completed")
 	c.JSON(http.StatusOK, result)
 }
 
