@@ -32,3 +32,14 @@ func GetReactionsForGitlabProject(gitlabProjectId string) ([]entity.Reaction, er
 	}
 	return reactions, nil
 }
+
+func GetReactionTypeFromGitlabReaction(gitlabReaction string) string {
+	switch gitlabReaction {
+	case "thumbsup":
+		return entity.PositiveReaction
+	case "thumbsdown":
+		return entity.NegativeReaction
+	default:
+		return ""
+	}
+}

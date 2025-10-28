@@ -5,10 +5,10 @@ type GitlabWebhookRequest struct {
 	ObjectAttributes GitlabWebhookRequestObjectAttributes `json:"object_attributes"`
 	User             GitlabWebhookRequestUser             `json:"user"`
 	Note             GitlabWebhookRequestNote             `json:"note"`
+	EventType        string                               `json:"event_type"`
 }
 
 type GitlabWebhookRequestObjectAttributes struct {
-	Action       string `json:"action"`
 	Name         string `json:"name"`
 	AwardedOnUrl string `json:"awarded_on_url"`
 }
