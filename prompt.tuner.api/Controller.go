@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"prompt.tuner.api/entity"
 )
 
 func Webhook(c *gin.Context) {
@@ -34,8 +35,8 @@ func GetPrompt(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "No gitlab project id found"})
 		return
 	}
-	var collection = GetPromptsCollection()
-	var filter = bson.M{"gitlabprojectid": gitlabProjectId}
+	collection := GetPromptsCollection()
+	filter := bson.M{"gitlabprojectid": gitlabProjectId}
 	count, err := collection.CountDocuments(context.TODO(), filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "Database error"})
@@ -45,17 +46,45 @@ func GetPrompt(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Prompt not found"})
 		return
 	}
-	var prompt Prompt
+	var prompt entity.Prompt
 	err = collection.FindOne(context.TODO(), filter).Decode(&prompt)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Prompt decode error"})
 		return
 	}
-	c.JSON(http.StatusOK, prompt)
+	var tunedPromptsCache = GetTunedPromptsCache()
+	if tunedPromptsCache.Exists(gitlabProjectId) {
+		c.JSON(
+			http.StatusOK,
+			gin.H{
+				"basePrompt":  prompt.Text,
+				"tunedPrompt": tunedPromptsCache.Get(gitlabProjectId),
+			},
+		)
+		return
+	}
+	projectReactions, err := GetReactionsForGitlabProject(gitlabProjectId)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Project reactions decode error"})
+		return
+	}
+	tunedPrompt, err := TuneBasePrompt(prompt.Text, projectReactions)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Tune prompt error"})
+		return
+	}
+	tunedPromptsCache.Add(gitlabProjectId, tunedPrompt)
+	c.JSON(
+		http.StatusOK,
+		gin.H{
+			"basePrompt":  prompt.Text,
+			"tunedPrompt": tunedPrompt,
+		},
+	)
 }
 
 func SetBasePrompt(c *gin.Context) {
-	var prompt Prompt
+	var prompt entity.Prompt
 	if err := c.ShouldBindJSON(&prompt); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 		return

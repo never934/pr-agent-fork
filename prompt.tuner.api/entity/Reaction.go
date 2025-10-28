@@ -1,4 +1,4 @@
-package main
+package entity
 
 type Reaction struct {
 	Type            string   `json:"type"`
