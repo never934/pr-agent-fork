@@ -27,7 +27,7 @@ func GetDatabase() *mongo.Database {
 		if err != nil {
 			log.Println(err)
 		}
-		Database = client.Database("prompt.tuner.api")
+		Database = client.Database("prompt_tuner_api")
 		return Database
 	} else {
 		return Database
