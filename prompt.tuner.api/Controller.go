@@ -2,16 +2,16 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"log"
 	"net/http"
 	"prompt.tuner.api/entity"
-	"strconv"
 	"strings"
-	"time"
 )
 
 func Webhook(c *gin.Context) {
@@ -42,41 +42,75 @@ func Webhook(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{})
 		return
 	}
-	var collection = GetReactionsCollection()
-	if gitlabWebhookRequest.EventType == "revoke" {
-		collection.DeleteOne(
-			context.TODO(),
-			bson.M{
-				"reactionurl": gitlabWebhookRequest.ObjectAttributes.AwardedOnUrl,
-				"type":        GetReactionTypeFromGitlabReaction(gitlabWebhookRequest.ObjectAttributes.Name),
-			},
-		)
-		log.Println("[Webhook] reaction deleted")
+	var collection = GetAiMergeRequestCommentsCollection()
+	var aiMergeRequestCommentRecord entity.AiMrComment
+	mongoFindErr := collection.FindOne(
+		context.TODO(),
+		bson.M{
+			"url": gitlabWebhookRequest.ObjectAttributes.AwardedOnUrl,
+		},
+	).Decode(&aiMergeRequestCommentRecord)
+	if mongoFindErr != nil {
+		if errors.Is(mongoFindErr, mongo.ErrNoDocuments) {
+			newAiCommentRecord, newAiCommentRecordErr := GetNewAiCommentRecord(gitlabWebhookRequest)
+			if newAiCommentRecordErr != nil {
+				log.Println("[Webhook] create new ai comment mr record error " + newAiCommentRecordErr.Error())
+				c.JSON(http.StatusOK, gin.H{})
+				return
+			}
+			var result, err = collection.InsertOne(context.TODO(), newAiCommentRecord)
+			if err != nil {
+				log.Println(fmt.Sprintf("[Webhook] Database insert ai comment mr record error %s", err.Error()))
+				c.JSON(http.StatusOK, gin.H{})
+				return
+			}
+			log.Println("[Webhook] completed, insterted new ai comment mr record")
+			c.JSON(http.StatusOK, result)
+			return
+		}
+		log.Println("[Webhook] mongo find error " + mongoFindErr.Error())
 		c.JSON(http.StatusOK, gin.H{})
 		return
 	}
-	reactionType := ""
-	if gitlabWebhookRequest.ObjectAttributes.Name == "thumbsup" {
-		reactionType = entity.PositiveReaction
+	var intLikeOrDislikeRepresentation int
+	if IsWebhookRequestAddReaction(gitlabWebhookRequest) {
+		intLikeOrDislikeRepresentation = 1
+	} else {
+		intLikeOrDislikeRepresentation = -1
 	}
-	if gitlabWebhookRequest.ObjectAttributes.Name == "thumbsdown" {
-		reactionType = entity.NegativeReaction
-	}
-	reaction := entity.Reaction{
-		Type:            reactionType,
-		AiComment:       gitlabWebhookRequest.Note.Description,
-		CreateDate:      time.Now().Format(time.RFC1123),
-		GitlabProjectId: strconv.Itoa(gitlabWebhookRequest.ProjectId),
-		ReactionUrl:     gitlabWebhookRequest.ObjectAttributes.AwardedOnUrl,
-	}
-	var result, err = collection.InsertOne(context.Background(), reaction)
-	if err != nil {
-		log.Println(fmt.Sprintf("[Webhook] Database insert reaction error %s", err.Error()))
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "Database insert reaction error"})
+	var updateTransaction any
+	isWebhookRequestLike, isWebhookRequestLikeErr := IsWebhookRequestLike(gitlabWebhookRequest)
+	if isWebhookRequestLikeErr != nil {
+		log.Println("[Webhook] not like or dislike reaction " + mongoFindErr.Error())
+		c.JSON(http.StatusOK, gin.H{})
 		return
 	}
-	log.Println("[Webhook] completed")
-	c.JSON(http.StatusOK, result)
+	if isWebhookRequestLike {
+		updateTransaction = bson.M{
+			"$inc": bson.M{
+				"likescount": intLikeOrDislikeRepresentation,
+			},
+		}
+	} else {
+		updateTransaction = bson.M{
+			"$inc": bson.M{
+				"dislikescount": intLikeOrDislikeRepresentation,
+			},
+		}
+	}
+	var updateResult, updateErr = collection.UpdateOne(
+		context.TODO(),
+		bson.M{
+			"url": gitlabWebhookRequest.ObjectAttributes.AwardedOnUrl,
+		},
+		updateTransaction,
+	)
+	if updateErr != nil {
+		log.Println("[Webhook] update error " + updateErr.Error())
+		c.JSON(http.StatusOK, gin.H{})
+		return
+	}
+	c.JSON(http.StatusOK, updateResult)
 }
 
 func GetPrompt(c *gin.Context) {
@@ -114,7 +148,7 @@ func GetPrompt(c *gin.Context) {
 		)
 		return
 	}
-	projectReactions, err := GetReactionsForGitlabProject(gitlabProjectId)
+	projectReactions, err := GetAiMrCommentsForGitlabProject(gitlabProjectId)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Project reactions decode error"})
 		return

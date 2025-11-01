@@ -9,36 +9,37 @@ import (
 	"prompt.tuner.api/entity"
 )
 
-func TuneBasePrompt(basePrompt string, reactions []entity.Reaction) (string, error) {
+func TuneBasePrompt(basePrompt string, aiMrComments []entity.AiMrComment) (string, error) {
 	client := deepseek.NewClient(os.Getenv("DEEPSEEK_API_KEY"))
-	type ReactionRepresentation struct {
-		typeRepresentation       string
-		aiCommentsRepresentation string
+	type AiCommentRepresentation struct {
+		likesRepresentation           string
+		dislikesRepresentation        string
+		aiCommentPointsRepresentation string
 	}
-	var reactionsRepresentation []ReactionRepresentation
-	for _, reaction := range reactions {
-		typeRepresentation := ""
-		if reaction.Type == entity.NegativeReaction {
-			typeRepresentation = "Негативная реакция"
+	var aiCommentsRepresentation []AiCommentRepresentation
+	for _, aiMrComment := range aiMrComments {
+		var aiCommentPointsRepresentation string
+		for _, aiCommentPoint := range aiMrComment.CommentPoints {
+			aiCommentPointsRepresentation += "\n" + aiCommentPoint
 		}
-		if reaction.Type == entity.PositiveReaction {
-			typeRepresentation = "Позитивная реакция"
+		var aiCommentRepresentation = AiCommentRepresentation{
+			likesRepresentation:           fmt.Sprintf("Лайков %d", aiMrComment.LikesCount),
+			dislikesRepresentation:        fmt.Sprintf("Дизлайков %d", aiMrComment.DislikesCount),
+			aiCommentPointsRepresentation: aiCommentPointsRepresentation,
 		}
-		var reactionRepresentation = ReactionRepresentation{
-			typeRepresentation:       typeRepresentation,
-			aiCommentsRepresentation: reaction.AiComment,
-		}
-		reactionsRepresentation = append(reactionsRepresentation, reactionRepresentation)
+		aiCommentsRepresentation = append(aiCommentsRepresentation, aiCommentRepresentation)
 	}
-	var reactionsString string
-	for _, reactionRepresentation := range reactionsRepresentation {
-		reactionsString +=
-			reactionRepresentation.typeRepresentation + " " + reactionRepresentation.aiCommentsRepresentation + "\n"
+	var aiCommentsString string
+	for _, aiCommentRepresentation := range aiCommentsRepresentation {
+		aiCommentsString +=
+			"\n\n" + aiCommentRepresentation.aiCommentPointsRepresentation + "\n" +
+				aiCommentRepresentation.likesRepresentation + "\n" +
+				aiCommentRepresentation.dislikesRepresentation + "\n\n"
 	}
 	message := fmt.Sprintf(
-		"Есть базовый промт %s и есть реакции на него: %s . Дай улучшенный промпт на основе реакций",
+		"Есть базовый промт %s и есть реакции на него: %s Дай улучшенный промпт на основе реакций",
 		basePrompt,
-		reactionsString,
+		aiCommentsString,
 	)
 	log.Println(fmt.Sprintf("Process AI with message %s", message))
 	request := &deepseek.ChatCompletionRequest{

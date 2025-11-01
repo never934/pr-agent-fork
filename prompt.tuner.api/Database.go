@@ -39,6 +39,6 @@ func GetPromptsCollection() *mongo.Collection {
 	return GetDatabase().Collection("prompts")
 }
 
-func GetReactionsCollection() *mongo.Collection {
-	return GetDatabase().Collection("reactions")
+func GetAiMergeRequestCommentsCollection() *mongo.Collection {
+	return GetDatabase().Collection("ai_mr_comments")
 }

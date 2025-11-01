@@ -7,8 +7,8 @@ import (
 	"prompt.tuner.api/entity"
 )
 
-func GetReactionsForGitlabProject(gitlabProjectId string) ([]entity.Reaction, error) {
-	var collection = GetReactionsCollection()
+func GetAiMrCommentsForGitlabProject(gitlabProjectId string) ([]entity.AiMrComment, error) {
+	var collection = GetAiMergeRequestCommentsCollection()
 	var filter = bson.M{"gitlabprojectid": gitlabProjectId}
 	findOptions := options.Find()
 	findOptions.SetSort(bson.D{{Key: "createddate", Value: -1}})
@@ -18,28 +18,17 @@ func GetReactionsForGitlabProject(gitlabProjectId string) ([]entity.Reaction, er
 		return nil, err
 	}
 	defer cursor.Close(context.TODO())
-	var reactions []entity.Reaction
+	var aiMrComments []entity.AiMrComment
 	for cursor.Next(context.Background()) {
-		var reaction entity.Reaction
+		var reaction entity.AiMrComment
 		err := cursor.Decode(&reaction)
 		if err != nil {
 			return nil, err
 		}
-		reactions = append(reactions, reaction)
+		aiMrComments = append(aiMrComments, reaction)
 	}
 	if err := cursor.Err(); err != nil {
 		return nil, err
 	}
-	return reactions, nil
-}
-
-func GetReactionTypeFromGitlabReaction(gitlabReaction string) string {
-	switch gitlabReaction {
-	case "thumbsup":
-		return entity.PositiveReaction
-	case "thumbsdown":
-		return entity.NegativeReaction
-	default:
-		return ""
-	}
+	return aiMrComments, nil
 }
